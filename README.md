@@ -1,0 +1,1 @@
+# nextjs_bug_tracker
