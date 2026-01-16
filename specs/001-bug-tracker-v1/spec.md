@@ -178,6 +178,8 @@ As a Developer, I want to link commits and pull requests to issues so that the f
 
 #### Triage & Organization
 - **FR-006**: System MUST support issue statuses: Open (default), In Progress, Resolved, Closed
+- **FR-006a**: System MUST allow forward status transitions (Open → In Progress → Resolved → Closed) without confirmation
+- **FR-006b**: System MUST require user confirmation for backward status transitions (e.g., Resolved → Open) with reason prompt
 - **FR-007**: System MUST support priority levels: Critical, High, Medium (default), Low
 - **FR-008**: System MUST support custom labels with name and color
 - **FR-009**: System MUST allow assigning issues to registered users
@@ -198,7 +200,10 @@ As a Developer, I want to link commits and pull requests to issues so that the f
 
 #### Data Linking
 - **FR-018**: System MUST allow linking external commits (by SHA) and pull requests (by URL) to issues
-- **FR-019**: System MUST display linked items in issue detail view
+- **FR-018a**: System MUST accept links immediately without blocking on external validation
+- **FR-018b**: System MUST mark links as "verified" or "unverified" based on external service response
+- **FR-018c**: System SHOULD retry validation of unverified links periodically (background job)
+- **FR-019**: System MUST display linked items in issue detail view with verification status indicator
 
 ### Key Keyboard Bindings
 
@@ -276,6 +281,13 @@ Each feature in this specification will be broken down using the SDD cycle:
 - New users can navigate the interface without reading documentation
 - All primary actions accessible via keyboard
 
+### Error Handling UX Requirements
+- Toast notifications for operation errors (network, save failures): non-blocking, auto-dismiss after 5 seconds
+- Toast notifications dismissible via click or `Escape` key
+- Inline validation errors displayed next to form fields in real-time
+- Error toasts include actionable message (what failed, how to retry)
+- Critical errors (session expired, server unreachable) use persistent toast until resolved
+
 ### Accessibility Requirements
 - WCAG 2.1 AA compliance minimum
 - All interactive elements keyboard accessible
@@ -287,6 +299,23 @@ Each feature in this specification will be broken down using the SDD cycle:
 - No secrets in code; environment variables only
 - Input sanitization to prevent XSS and SQL injection
 - Session-based authentication with secure cookies
+
+### Reliability & Availability Requirements
+- 99% uptime target (~7 hours maximum downtime per month)
+- Daily automated database backups with 7-day retention
+- Basic health check endpoint (`/api/health`) for monitoring
+- Graceful degradation: read-only mode if database write fails
+- Recovery time objective (RTO): 4 hours maximum
+
+### Observability Requirements
+- Structured JSON logging for all API requests and errors
+- Log levels: ERROR, WARN, INFO, DEBUG (configurable via environment)
+- Key metrics exposed via `/api/metrics` endpoint:
+  - Request latency (p50, p95, p99)
+  - Error rate by endpoint
+  - Active users (daily/weekly/monthly)
+  - Issue creation rate
+- Correlation IDs for request tracing across log entries
 
 ---
 
@@ -332,6 +361,18 @@ For any feature/task to be considered complete:
 5. **Public Access**: Issues are viewable by all users; only authenticated users can create/edit/triage
 6. **Browser Support**: Modern browsers only (Chrome, Firefox, Safari, Edge - latest 2 versions)
 7. **Mobile**: Responsive design for viewing, but primary UX optimized for desktop keyboard usage
+
+---
+
+## Clarifications
+
+### Session 2026-01-16
+
+- Q: What rules govern issue status transitions? → A: Semi-restricted: Forward transitions free, backward requires confirmation
+- Q: What are the uptime and recovery expectations? → A: 99% uptime target with daily backups and basic health checks
+- Q: What level of observability (logging, metrics, tracing)? → A: Standard: Structured JSON logs + key metrics (latency, error rates, active users)
+- Q: How to handle failures when validating linked commits/PRs? → A: Graceful: Accept link as-is, mark as "unverified" if validation fails, retry later
+- Q: How should error messages be displayed to users? → A: Toast notifications (non-blocking, auto-dismiss 5s) with inline validation for forms
 
 ---
 
